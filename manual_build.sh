@@ -1,5 +1,7 @@
 #!/bin/bash
 
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
 dependencies=("curl" "tar" "cmake")
 
 for dep in ${dependencies[@]}; do
@@ -24,22 +26,25 @@ if [[ "$ret" == "0" ]]; then
     fi
 fi
 
-YOGA_RELEASE="3.2.1"
+YOGA_RELEASE="$(cat ${SCRIPT_DIR}/VERSION)"
 YOGA_TAR="v${YOGA_RELEASE}.tar.gz"
 
 echo "Downloading yoga source code, version: ${YOGA_RELEASE}"
 
-if [[ -f "${YOGA_TAR}" ]]; then
+if [[ -f "${SCRIPT_DIR}/${YOGA_TAR}" ]]; then
     echo "Cleaning old build artifacts"
-    rm "${YOGA_TAR}"
+    rm "${SCRIPT_DIR}/${YOGA_TAR}"
 fi
 
-if [[ -d "yoga-${YOGA_RELEASE}" ]]; then
+if [[ -d "${SCRIPT_DIR}/yoga-${YOGA_RELEASE}" ]]; then
     echo "Cleaning old extract artifacts"
-    rm -rf "yoga-${YOGA_RELEASE}"
+    rm -rf "${SCRIPT_DIR}/yoga-${YOGA_RELEASE}"
 fi
 
-curl -LO --fail "https://github.com/facebook/yoga/archive/refs/tags/${YOGA_TAR}"
+curl -L \
+     --fail \
+     "https://github.com/facebook/yoga/archive/refs/tags/${YOGA_TAR}" \
+     --output "${SCRIPT_DIR}/${YOGA_TAR}"
 ret=$?
 
 if [[ "${ret}" != "0" ]]; then
@@ -48,9 +53,9 @@ if [[ "${ret}" != "0" ]]; then
 fi
 
 echo "Extracting yoga source code..."
-tar xzvf "${YOGA_TAR}"
+tar xzvf "${SCRIPT_DIR}/${YOGA_TAR}" -C "${SCRIPT_DIR}"
 
-pushd "yoga-${YOGA_RELEASE}" || exit 1
+pushd "${SCRIPT_DIR}/yoga-${YOGA_RELEASE}" || exit 1
 
 echo "Disabling tests compilation"
 sed -i '/add_subdirectory(tests)/d' "CMakeLists.txt"
@@ -61,3 +66,5 @@ cmake --build build
 
 echo "Installing yoga ${YOGA_RELEASE} using sudo..."
 sudo cmake --install build
+
+popd || exit 1
